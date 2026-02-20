@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>✨ Study Buddy Timer</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Fredoka+One&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:      #f5e6d8;
+    --card:    #fdf4ec;
+    --pink:    #e8836e;
+    --pink2:   #d4604a;
+    --lavender:#c4a0d8;
+    --mint:    #7dc4a8;
+    --peach:   #e8a870;
+    --yellow:  #e8c860;
+    --blue:    #90b8d8;
+    --text:    #4a2e1e;
+    --muted:   #a08060;
+    --border:  #ddb898;
+    --shadow:  rgba(160,100,60,0.18);
+  }
+
+  body {
+    background: var(--bg);
+    font-family: 'Nunito', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* Floating shapes background */
+  .bg-shapes { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+  .shape {
+    position: absolute;
+    border-radius: 50%;
+    opacity: 0.45;
+    animation: floatShape linear infinite;
+  }
+  @keyframes floatShape {
+    0%   { transform: translateY(0) rotate(0deg); }
+    50%  { transform: translateY(-18px) rotate(180deg); }
+    100% { transform: translateY(0) rotate(360deg); }
+  }
+
+  /* Stars / sparkles */
+  .sparkle {
+    position: absolute;
+    font-size: 1.1rem;
+    animation: twinkle 2.5s ease-in-out infinite;
+    pointer-events: none;
+  }
+  @keyframes twinkle {
+    0%,100% { opacity: 0.2; transform: scale(0.8) rotate(0deg); }
+    50%      { opacity: 1;   transform: scale(1.2) rotate(20deg); }
+  }
+
+  /* ── CARD ── */
+  .card {
+    position: relative;
+    z-index: 2;
+    background: var(--card);
+    border-radius: 32px;
+    padding: 2.2rem 2.8rem 2rem;
+    box-shadow:
+      0 8px 40px var(--shadow),
+      0 2px 0 var(--border),
+      inset 0 1px 0 rgba(255,255,255,0.9);
+    border: 2px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.4rem;
+    min-width: 420px;
+    animation: popIn 0.5s cubic-bezier(0.34,1.56,0.64,1);
+  }
+
+  @keyframes popIn {
+    from { opacity: 0; transform: scale(0.8) translateY(20px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  /* ── HEADER ── */
+  .header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.1rem;
+  }
+
+  .title {
+    font-family: 'Fredoka One', sans-serif;
+    font-size: 1.7rem;
+    color: var(--text);
+    letter-spacing: 0.04em;
+  }
+
+  .subtitle {
+    font-size: 0.78rem;
+    color: var(--muted);
+    font-weight: 600;
+    letter-spacing: 0.08em;
+  }
+
+  /* ── MASCOT ── */
+  .mascot-area {
+    position: relative;
+    width: 130px;
+    height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .mascot-svg {
+    animation: mascotBob 3s ease-in-out infinite;
+    filter: drop-shadow(0 6px 12px rgba(160,100,60,0.25));
+    transition: transform 0.3s;
+  }
+
+  @keyframes mascotBob {
+    0%,100% { transform: translateY(0); }
+    50%      { transform: translateY(-6px); }
+  }
+
+  .mascot-svg.excited {
+    animation: mascotWiggle 0.4s ease-in-out infinite alternate;
+  }
+  @keyframes mascotWiggle {
+    from { transform: rotate(-8deg) scale(1.05); }
+    to   { transform: rotate(8deg) scale(1.05); }
+  }
+
+  .mascot-svg.sleeping {
+    animation: mascotSleep 2s ease-in-out infinite;
+  }
+  @keyframes mascotSleep {
+    0%,100% { transform: translateY(0) rotate(-3deg); }
+    50%      { transform: translateY(4px) rotate(3deg); }
+  }
+
+  /* speech bubble */
+  .bubble {
+    position: absolute;
+    top: -14px;
+    right: -30px;
+    background: #e8c860;
+    border: 2px solid #c0a030;
+    border-radius: 14px 14px 14px 2px;
+    padding: 4px 10px;
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: #7a6800;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.3s, transform 0.3s;
+    transform: scale(0.8);
+    pointer-events: none;
+  }
+  .bubble.show { opacity: 1; transform: scale(1); }
+
+  /* ── MASCOT PICKER ── */
+  .mascot-picker {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+  }
+
+  .pick-btn {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    background: #fff;
+    cursor: pointer;
+    font-size: 1.2rem;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+    box-shadow: 0 2px 6px var(--shadow);
+  }
+  .pick-btn:hover { transform: scale(1.2); border-color: var(--pink2); }
+  .pick-btn.active { border-color: var(--pink2); background: #fff0f8; box-shadow: 0 0 0 3px rgba(255,133,184,0.25); }
+
+  /* ── TIME DISPLAY ── */
+  .time-display {
+    font-family: 'Fredoka One', sans-serif;
+    font-size: 5.5rem;
+    line-height: 1;
+    letter-spacing: 0.04em;
+    color: var(--text);
+    text-shadow: 0 4px 0 rgba(180,120,200,0.15);
+    transition: color 0.4s;
+    position: relative;
+  }
+
+  .time-display.finished {
+    color: var(--pink2);
+    animation: flashPink 0.6s ease-in-out infinite alternate;
+  }  @keyframes flashPink {
+    from { opacity: 1; text-shadow: 0 0 20px rgba(212,96,74,0.6); }
+    to   { opacity: 0.4; text-shadow: none; }
+  }
+
+  /* ── PROGRESS RING ── */
+  .ring-wrap {
+    position: relative;
+    width: 180px; height: 180px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .ring-svg { position: absolute; top: 0; left: 0; transform: rotate(-90deg); }
+
+  .ring-track { fill: none; stroke: #e8ccb0; stroke-width: 10; }
+  .ring-fill  {
+    fill: none;
+    stroke: url(#ringGrad);
+    stroke-width: 10;
+    stroke-linecap: round;
+    stroke-dasharray: 502;
+    stroke-dashoffset: 0;
+    transition: stroke-dashoffset 1s linear;
+    filter: drop-shadow(0 0 6px rgba(232,131,110,0.5));
+  }
+  .ring-fill.finished { stroke: url(#ringGradFinish); box-shadow: 0 0 10px rgba(232,131,110,0.6); }
+
+  .ring-inner {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 0.2rem;
+    z-index: 1;
+  }
+
+  /* ── SPINNER INPUTS ── */
+  .inputs {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .time-input-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .unit-lbl {
+    font-size: 0.6rem;
+    font-weight: 800;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  .spin-btn {
+    width: 50px; height: 26px;
+    border-radius: 50px;
+    border: 2px solid var(--border);
+    background: #fff;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 0.65rem;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+    box-shadow: 0 2px 4px var(--shadow);
+  }
+  .spin-btn:hover { background: var(--pink); border-color: var(--pink2); color: #fff; transform: scale(1.05); }
+  .spin-btn:active { transform: scale(0.95); }
+
+  .spin-input {
+    font-family: 'Fredoka One', sans-serif;
+    font-size: 2rem;
+    width: 62px;
+    text-align: center;
+    background: #f5e0cc;
+    border: 2px solid var(--border);
+    border-radius: 14px;
+    color: var(--text);
+    outline: none;
+    padding: 5px 0;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+  .spin-input::-webkit-inner-spin-button,
+  .spin-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+  .spin-input:focus {
+    border-color: var(--pink2);
+    box-shadow: 0 0 0 3px rgba(232,131,110,0.25);
+    background: #f8ede0;
+  }
+
+  .sep {
+    font-family: 'Fredoka One', sans-serif;
+    font-size: 2.2rem;
+    color: var(--pink);
+    margin-bottom: 18px;
+  }
+
+  /* ── PRESETS ── */
+  .presets {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .preset {
+    font-family: 'Nunito', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 800;
+    padding: 0.3rem 0.8rem;
+    border-radius: 50px;
+    border: 2px solid var(--border);
+    background: #fff;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.18s;
+    box-shadow: 0 2px 4px var(--shadow);
+  }
+
+  .preset:nth-child(1) { --pc: #7dc4a8; --pct: #1e5040; }
+  .preset:nth-child(2) { --pc: #90b8d8; --pct: #1e3a58; }
+  .preset:nth-child(3) { --pc: #c4a0d8; --pct: #3e1e58; }
+  .preset:nth-child(4) { --pc: #e8836e; --pct: #581e0e; }
+  .preset:nth-child(5) { --pc: #e8a870; --pct: #582a0e; }
+  .preset:nth-child(6) { --pc: #e8c860; --pct: #584800; }
+  .preset:nth-child(7) { --pc: #d4604a; --pct: #580e00; }
+
+  .preset:hover {
+    background: var(--pc);
+    border-color: var(--pc);
+    color: var(--pct);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px var(--shadow);
+  }
+
+  /* ── BUTTONS ── */
+  .btn-row {
+    display: flex;
+    gap: 0.75rem;
+    width: 100%;
+  }
+
+  .btn {
+    flex: 1;
+    padding: 0.85rem 1rem;
+    border: 2px solid var(--border);
+    background: #fff;
+    color: var(--text);
+    font-family: 'Fredoka One', sans-serif;
+    font-size: 1.1rem;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    border-radius: 16px;
+    transition: all 0.18s;
+    box-shadow: 0 3px 0 var(--border);
+  }
+
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 5px 0 var(--border); }
+  .btn:active { transform: translateY(1px); box-shadow: 0 1px 0 var(--border); }
+
+  .btn.primary {
+    background: linear-gradient(135deg, var(--pink) 0%, var(--lavender) 100%);
+    border-color: var(--pink2);
+    color: white;
+    box-shadow: 0 3px 0 #a83820;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.15);
+  }
+  .btn.primary:hover { filter: brightness(1.06); box-shadow: 0 5px 0 #a83820; }
+  .btn.primary:active { box-shadow: 0 1px 0 #a83820; }
+
+  /* ── STATUS ── */
+  .status {
+    font-size: 0.8rem;
+    font-weight: 800;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+    min-height: 1.1rem;
+    text-align: center;
+  }
+  .status.alert { color: var(--pink2); }
+
+  /* hint */
+  .hint {
+    font-size: 0.62rem;
+    font-weight: 600;
+    color: var(--muted);
+    opacity: 0.6;
+    letter-spacing: 0.06em;
+  }
+
+  /* ── CONFETTI burst on finish ── */
+  .confetti-piece {
+    position: fixed;
+    width: 10px; height: 10px;
+    border-radius: 2px;
+    pointer-events: none;
+    z-index: 100;
+    animation: confettiFall linear forwards;
+  }
+  @keyframes confettiFall {
+    0%   { transform: translateY(0) rotate(0deg) scale(1); opacity: 1; }
+    100% { transform: translateY(300px) rotate(720deg) scale(0.3); opacity: 0; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Background decoration -->
+<div class="bg-shapes" id="bgShapes"></div>
+
+<div class="card">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="title">✨ Study Buddy ✨</div>
+    <div class="subtitle">focus • breathe • you've got this!</div>
+  </div>
+
+  <!-- Mascot -->
+  <div style="display:flex; flex-direction:column; align-items:center; gap:0.6rem;">
+    <div class="mascot-area">
+      <svg class="mascot-svg" id="mascotSvg" width="120" height="110" viewBox="0 0 120 110"></svg>
+      <div class="bubble" id="bubble">Let's study! 📚</div>
+    </div>
+    <div class="mascot-picker">
+      <button class="pick-btn active" onclick="selectMascot(0)" title="Bunny">🐰</button>
+      <button class="pick-btn" onclick="selectMascot(1)" title="Cat">🐱</button>
+      <button class="pick-btn" onclick="selectMascot(2)" title="Bear">🐻</button>
+      <button class="pick-btn" onclick="selectMascot(3)" title="Duck">🐥</button>
+    </div>
+  </div>
+
+  <!-- Ring + Time -->
+  <div class="ring-wrap">
+    <svg class="ring-svg" width="180" height="180" viewBox="0 0 180 180">
+      <defs>
+        <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#e8836e"/>
+          <stop offset="100%" stop-color="#c4a0d8"/>
+        </linearGradient>
+        <linearGradient id="ringGradFinish" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#e8836e"/>
+          <stop offset="100%" stop-color="#e8c860"/>
+        </linearGradient>
+      </defs>
+      <circle class="ring-track" cx="90" cy="90" r="80"/>
+      <circle class="ring-fill" id="ringFill" cx="90" cy="90" r="80"/>
+    </svg>
+    <div class="ring-inner">
+      <div class="time-display" id="display">00:05:00</div>
+    </div>
+  </div>
+
+  <!-- Inputs -->
+  <div class="inputs" id="spinnerSection">
+    <div class="time-input-group">
+      <button class="spin-btn" onclick="adjust('h',1)">▲</button>
+      <input class="spin-input" id="spinH" type="number" min="0" max="12" value="0">
+      <button class="spin-btn" onclick="adjust('h',-1)">▼</button>
+      <span class="unit-lbl">hrs</span>
+    </div>
+    <div class="sep">:</div>
+    <div class="time-input-group">
+      <button class="spin-btn" onclick="adjust('m',1)">▲</button>
+      <input class="spin-input" id="spinM" type="number" min="0" max="59" value="5">
+      <button class="spin-btn" onclick="adjust('m',-1)">▼</button>
+      <span class="unit-lbl">min</span>
+    </div>
+    <div class="sep">:</div>
+    <div class="time-input-group">
+      <button class="spin-btn" onclick="adjust('s',1)">▲</button>
+      <input class="spin-input" id="spinS" type="number" min="0" max="59" value="0">
+      <button class="spin-btn" onclick="adjust('s',-1)">▼</button>
+      <span class="unit-lbl">sec</span>
+    </div>
+  </div>
+
+  <div class="hint">type, scroll, or tap ▲▼ to set time</div>
+
+  <!-- Presets -->
+  <div class="presets">
+    <button class="preset" onclick="setPreset(0,0,30)">30 sec</button>
+    <button class="preset" onclick="setPreset(0,1,0)">1 min</button>
+    <button class="preset" onclick="setPreset(0,5,0)">5 min</button>
+    <button class="preset" onclick="setPreset(0,10,0)">10 min</button>
+    <button class="preset" onclick="setPreset(0,25,0)">25 min 🍅</button>
+    <button class="preset" onclick="setPreset(0,45,0)">45 min</button>
+    <button class="preset" onclick="setPreset(1,0,0)">1 hr</button>
+  </div>
+
+  <!-- Buttons -->
+  <div class="btn-row">
+    <button class="btn primary" id="startBtn" onclick="startStop()">Start! 🌸</button>
+    <button class="btn" onclick="reset()">Reset 🔄</button>
+  </div>
+
+  <div class="status" id="status"></div>
+</div>
+
+<script>
+// ─── MASCOTS (SVG drawn programmatically) ───
+const mascots = [
+  // 0: Bunny
+  (state) => `
+    <!-- body -->
+    <ellipse cx="60" cy="80" rx="30" ry="26" fill="#eebba0"/>
+    <!-- left ear -->
+    <ellipse cx="42" cy="38" rx="10" ry="22" fill="#eebba0" transform="rotate(-10 42 38)"/>
+    <ellipse cx="42" cy="38" rx="6" ry="16" fill="#d8836e" transform="rotate(-10 42 38)"/>
+    <!-- right ear -->
+    <ellipse cx="78" cy="38" rx="10" ry="22" fill="#eebba0" transform="rotate(10 78 38)"/>
+    <ellipse cx="78" cy="38" rx="6" ry="16" fill="#d8836e" transform="rotate(10 78 38)"/>
+    <!-- head -->
+    <circle cx="60" cy="62" r="28" fill="#f5cdb0"/>
+    <!-- cheeks -->
+    <ellipse cx="45" cy="68" rx="9" ry="6" fill="#d8836e" opacity="0.5"/>
+    <ellipse cx="75" cy="68" rx="9" ry="6" fill="#d8836e" opacity="0.5"/>
+    ${state === 'sleeping' ? `
+      <!-- sleeping eyes -->
+      <path d="M50 61 Q53 58 56 61" stroke="#b06080" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <path d="M64 61 Q67 58 70 61" stroke="#b06080" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <!-- zzz -->
+      <text x="82" y="42" font-size="11" fill="#c9b8ff" font-weight="bold" font-family="Fredoka One">z</text>
+      <text x="88" y="33" font-size="9" fill="#c9b8ff" font-weight="bold" font-family="Fredoka One">z</text>
+    ` : state === 'finished' ? `
+      <!-- star eyes -->
+      <text x="44" y="68" font-size="14" text-anchor="middle">⭐</text>
+      <text x="76" y="68" font-size="14" text-anchor="middle">⭐</text>
+    ` : `
+      <!-- normal eyes -->
+      <circle cx="51" cy="63" r="5" fill="#5a3d6e"/>
+      <circle cx="69" cy="63" r="5" fill="#5a3d6e"/>
+      <circle cx="53" cy="61" r="2" fill="white"/>
+      <circle cx="71" cy="61" r="2" fill="white"/>
+    `}
+    <!-- nose -->
+    <ellipse cx="60" cy="71" rx="4" ry="3" fill="#c85a38"/>
+    <!-- mouth -->
+    <path d="M56 75 Q60 79 64 75" stroke="#8a3820" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+    <!-- paws -->
+    <ellipse cx="38" cy="95" rx="12" ry="8" fill="#eebba0"/>
+    <ellipse cx="82" cy="95" rx="12" ry="8" fill="#eebba0"/>
+    <!-- book when studying -->
+    ${state === 'running' ? `
+      <rect x="44" y="86" width="32" height="22" rx="4" fill="#b8e0ff" stroke="#80b8e0" stroke-width="1.5"/>
+      <line x1="60" y1="86" x2="60" y2="108" stroke="#80b8e0" stroke-width="1.5"/>
+      <line x1="48" y1="93" x2="58" y2="93" stroke="#80b8e0" stroke-width="1"/>
+      <line x1="48" y1="98" x2="58" y2="98" stroke="#80b8e0" stroke-width="1"/>
+      <line x1="62" y1="93" x2="72" y2="93" stroke="#80b8e0" stroke-width="1"/>
+    ` : ''}
+  `,
+
+  // 1: Cat
+  (state) => `
+    <!-- body -->
+    <ellipse cx="60" cy="82" rx="28" ry="24" fill="#c4a0d8"/>
+    <!-- tail -->
+    <path d="M88 90 Q105 70 95 55" stroke="#b088c8" stroke-width="10" fill="none" stroke-linecap="round"/>
+    <!-- left ear -->
+    <polygon points="36,52 28,28 50,38" fill="#b088c8"/>
+    <polygon points="38,50 32,33 48,40" fill="#e8836e"/>
+    <!-- right ear -->
+    <polygon points="84,52 92,28 70,38" fill="#b088c8"/>
+    <polygon points="82,50 88,33 72,40" fill="#e8836e"/>
+    <!-- head -->
+    <circle cx="60" cy="60" r="27" fill="#d4b8e8"/>
+    <!-- cheeks -->
+    <ellipse cx="44" cy="66" rx="9" ry="6" fill="#e8836e" opacity="0.45"/>
+    <ellipse cx="76" cy="66" rx="9" ry="6" fill="#e8836e" opacity="0.45"/>
+    <!-- whiskers -->
+    <line x1="30" y1="63" x2="50" y2="66" stroke="#b088c8" stroke-width="1.5" opacity="0.8"/>
+    <line x1="30" y1="69" x2="50" y2="69" stroke="#b088c8" stroke-width="1.5" opacity="0.8"/>
+    <line x1="90" y1="63" x2="70" y2="66" stroke="#b088c8" stroke-width="1.5" opacity="0.8"/>
+    <line x1="90" y1="69" x2="70" y2="69" stroke="#b088c8" stroke-width="1.5" opacity="0.8"/>
+    ${state === 'sleeping' ? `
+      <path d="M50 58 Q53 55 56 58" stroke="#7a50a0" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <path d="M64 58 Q67 55 70 58" stroke="#7a50a0" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <text x="82" y="38" font-size="11" fill="#ffb3d1" font-weight="bold" font-family="Fredoka One">z</text>
+      <text x="89" y="29" font-size="9" fill="#ffb3d1" font-weight="bold" font-family="Fredoka One">z</text>
+    ` : state === 'finished' ? `
+      <text x="44" y="66" font-size="14" text-anchor="middle">💜</text>
+      <text x="76" y="66" font-size="14" text-anchor="middle">💜</text>
+    ` : `
+      <!-- cat eyes - almond shaped -->
+      <ellipse cx="50" cy="60" rx="6" ry="5" fill="#5a3d6e"/>
+      <ellipse cx="70" cy="60" rx="6" ry="5" fill="#5a3d6e"/>
+      <circle cx="52" cy="58" r="2" fill="white"/>
+      <circle cx="72" cy="58" r="2" fill="white"/>
+    `}
+    <!-- nose -->
+    <polygon points="60,67 57,70 63,70" fill="#c85a38"/>
+    <path d="M57 70 Q60 74 63 70" stroke="#8a3820" stroke-width="1.5" fill="none"/>
+    <!-- paws -->
+    <ellipse cx="40" cy="96" rx="11" ry="7" fill="#c4a0d8"/>
+    <ellipse cx="80" cy="96" rx="11" ry="7" fill="#c4a0d8"/>
+    ${state === 'running' ? `
+      <rect x="45" y="87" width="30" height="20" rx="4" fill="#b8f0e0" stroke="#60c0a0" stroke-width="1.5"/>
+      <line x1="60" y1="87" x2="60" y2="107" stroke="#60c0a0" stroke-width="1.5"/>
+      <line x1="49" y1="93" x2="59" y2="93" stroke="#60c0a0" stroke-width="1"/>
+      <line x1="61" y1="93" x2="71" y2="93" stroke="#60c0a0" stroke-width="1"/>
+    ` : ''}
+  `,
+
+  // 2: Bear
+  (state) => `
+    <!-- body -->
+    <ellipse cx="60" cy="83" rx="30" ry="24" fill="#d4904a"/>
+    <!-- ears -->
+    <circle cx="36" cy="40" r="14" fill="#d4904a"/>
+    <circle cx="36" cy="40" r="9" fill="#b87030"/>
+    <circle cx="84" cy="40" r="14" fill="#d4904a"/>
+    <circle cx="84" cy="40" r="9" fill="#b87030"/>
+    <!-- head -->
+    <circle cx="60" cy="62" r="28" fill="#e8a860"/>
+    <!-- snout -->
+    <ellipse cx="60" cy="72" rx="13" ry="10" fill="#c07840"/>
+    <!-- cheeks -->
+    <ellipse cx="42" cy="68" rx="9" ry="6" fill="#c85a38" opacity="0.5"/>
+    <ellipse cx="78" cy="68" rx="9" ry="6" fill="#c85a38" opacity="0.5"/>
+    ${state === 'sleeping' ? `
+      <path d="M50 58 Q53 55 56 58" stroke="#a07050" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <path d="M64 58 Q67 55 70 58" stroke="#a07050" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <text x="82" y="36" font-size="11" fill="#f0b888" font-weight="bold" font-family="Fredoka One">z</text>
+      <text x="89" y="27" font-size="9" fill="#f0b888" font-weight="bold" font-family="Fredoka One">z</text>
+    ` : state === 'finished' ? `
+      <text x="44" y="66" font-size="14" text-anchor="middle">🌟</text>
+      <text x="76" y="66" font-size="14" text-anchor="middle">🌟</text>
+    ` : `
+      <circle cx="50" cy="60" r="5.5" fill="#5a3d2e"/>
+      <circle cx="70" cy="60" r="5.5" fill="#5a3d2e"/>
+      <circle cx="52" cy="58" r="2" fill="white"/>
+      <circle cx="72" cy="58" r="2" fill="white"/>
+    `}
+    <!-- nose -->
+    <ellipse cx="60" cy="70" rx="5" ry="4" fill="#7a3018"/>
+    <path d="M56 74 Q60 78 64 74" stroke="#5a2010" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+    <!-- paws -->
+    <ellipse cx="38" cy="97" rx="13" ry="8" fill="#d4904a"/>
+    <ellipse cx="82" cy="97" rx="13" ry="8" fill="#d4904a"/>
+    ${state === 'running' ? `
+      <rect x="44" y="87" width="32" height="21" rx="4" fill="#fff3a0" stroke="#c0a800" stroke-width="1.5"/>
+      <line x1="60" y1="87" x2="60" y2="108" stroke="#c0a800" stroke-width="1.5"/>
+      <line x1="48" y1="93" x2="58" y2="93" stroke="#c0a800" stroke-width="1"/>
+      <line x1="48" y1="98" x2="58" y2="98" stroke="#c0a800" stroke-width="1"/>
+      <line x1="62" y1="93" x2="72" y2="93" stroke="#c0a800" stroke-width="1"/>
+    ` : ''}
+  `,
+
+  // 3: Duck
+  (state) => `
+    <!-- body -->
+    <ellipse cx="60" cy="84" rx="30" ry="23" fill="#d4a830"/>
+    <!-- wing -->
+    <ellipse cx="80" cy="85" rx="15" ry="10" fill="#c09020" transform="rotate(20 80 85)"/>
+    <!-- head -->
+    <circle cx="55" cy="56" r="26" fill="#e8c040"/>
+    <!-- beak -->
+    <ellipse cx="30" cy="62" rx="12" ry="7" fill="#d06820" transform="rotate(-10 30 62)"/>
+    <!-- cheeks -->
+    <ellipse cx="48" cy="63" rx="8" ry="6" fill="#c85a38" opacity="0.4"/>
+    <ellipse cx="66" cy="60" rx="8" ry="6" fill="#c85a38" opacity="0.4"/>
+    ${state === 'sleeping' ? `
+      <path d="M46 52 Q49 49 52 52" stroke="#a08030" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <path d="M58 50 Q61 47 64 50" stroke="#a08030" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <text x="74" y="30" font-size="11" fill="#ffe860" font-weight="bold" font-family="Fredoka One">z</text>
+      <text x="82" y="21" font-size="9" fill="#ffe860" font-weight="bold" font-family="Fredoka One">z</text>
+    ` : state === 'finished' ? `
+      <text x="46" y="60" font-size="14" text-anchor="middle">✨</text>
+      <text x="66" y="58" font-size="14" text-anchor="middle">✨</text>
+    ` : `
+      <circle cx="47" cy="54" r="5" fill="#5a4a1e"/>
+      <circle cx="65" cy="52" r="5" fill="#5a4a1e"/>
+      <circle cx="49" cy="52" r="1.8" fill="white"/>
+      <circle cx="67" cy="50" r="1.8" fill="white"/>
+    `}
+    <!-- feet -->
+    <ellipse cx="46" cy="101" rx="13" ry="7" fill="#d06820" transform="rotate(-10 46 101)"/>
+    <ellipse cx="74" cy="101" rx="13" ry="7" fill="#d06820" transform="rotate(10 74 101)"/>
+    ${state === 'running' ? `
+      <rect x="42" y="84" width="30" height="20" rx="4" fill="#b8e0ff" stroke="#60a0d0" stroke-width="1.5"/>
+      <line x1="57" y1="84" x2="57" y2="104" stroke="#60a0d0" stroke-width="1.5"/>
+      <line x1="45" y1="90" x2="55" y2="90" stroke="#60a0d0" stroke-width="1"/>
+      <line x1="59" y1="90" x2="69" y2="90" stroke="#60a0d0" stroke-width="1"/>
+    ` : ''}
+  `
+];
+
+const bubbleMessages = {
+  idle:     ["Let's study! 📚", "Ready to focus! 🌸", "You can do it! ⭐", "Stay comfy~ ☕"],
+  running:  ["Studying hard! 📖", "In the zone! 🎯", "Keep going! 💪", "Focus mode! 🔕"],
+  paused:   ["Taking a breather~", "Rest up! 💤", "Almost there! 🌟"],
+  finished: ["Great job!! 🎉", "You did it!! 🌈", "Amazing!! ⭐✨", "Superstar!! 🏆"]
+};
+
+let currentMascot = 0;
+let mascotState = 'idle'; // idle, running, sleeping, finished
+
+function renderMascot(state) {
+  mascotState = state;
+  const svg = document.getElementById('mascotSvg');
+  svg.innerHTML = mascots[currentMascot](state);
+  svg.className = 'mascot-svg' + (state === 'sleeping' ? ' sleeping' : state === 'finished' ? ' excited' : '');
+}
+
+function selectMascot(idx) {
+  currentMascot = idx;
+  document.querySelectorAll('.pick-btn').forEach((b,i) => b.classList.toggle('active', i===idx));
+  renderMascot(mascotState);
+}
+
+function showBubble(category) {
+  const msgs = bubbleMessages[category] || bubbleMessages.idle;
+  const msg = msgs[Math.floor(Math.random() * msgs.length)];
+  const bub = document.getElementById('bubble');
+  bub.textContent = msg;
+  bub.classList.add('show');
+  clearTimeout(window._bubbleTimer);
+  window._bubbleTimer = setTimeout(() => bub.classList.remove('show'), 3000);
+}
+
+// ─── BACKGROUND SHAPES ───
+const bgShapes = document.getElementById('bgShapes');
+const shapeData = [
+  {w:80, h:80, x:5, y:10,  color:'#e8a888', dur:6},
+  {w:50, h:50, x:90,y:5,   color:'#c4a0d8', dur:8},
+  {w:65, h:65, x:80,y:80,  color:'#7dc4a8', dur:7},
+  {w:40, h:40, x:2, y:70,  color:'#e8c870', dur:9},
+  {w:55, h:55, x:45,y:88,  color:'#90b8d8', dur:6.5},
+  {w:35, h:35, x:60,y:2,   color:'#e8836e', dur:10},
+];
+shapeData.forEach((s, i) => {
+  const el = document.createElement('div');
+  el.className = 'shape';
+  el.style.cssText = `width:${s.w}px;height:${s.h}px;left:${s.x}%;top:${s.y}%;background:${s.color};animation-duration:${s.dur}s;animation-delay:${-i}s;`;
+  bgShapes.appendChild(el);
+});
+
+// Sparkles
+const sparkleEmojis = ['✨','⭐','🌸','💫','🌟','💖'];
+for (let i = 0; i < 12; i++) {
+  const el = document.createElement('div');
+  el.className = 'sparkle';
+  el.textContent = sparkleEmojis[i % sparkleEmojis.length];
+  el.style.cssText = `left:${Math.random()*95}%;top:${Math.random()*90}%;animation-delay:${Math.random()*3}s;animation-duration:${2+Math.random()*2}s;`;
+  bgShapes.appendChild(el);
+}
+
+// ─── TIMER LOGIC ───
+let hours = 0, minutes = 5, seconds = 0;
+let totalSeconds = 0, remaining = 0;
+let interval = null, running = false, finished = false;
+let audioCtx = null, alarmInterval = null;
+
+const display  = document.getElementById('display');
+const spinH    = document.getElementById('spinH');
+const spinM    = document.getElementById('spinM');
+const spinS    = document.getElementById('spinS');
+const startBtn = document.getElementById('startBtn');
+const progressRing = document.getElementById('ringFill');
+const statusEl = document.getElementById('status');
+const spinner  = document.getElementById('spinnerSection');
+const CIRCUMFERENCE = 502;
+
+function pad(n) { return String(Math.max(0,n)).padStart(2,'0'); }
+
+function syncFromInputs() {
+  hours   = Math.max(0, Math.min(12, parseInt(spinH.value)||0));
+  minutes = Math.max(0, Math.min(59, parseInt(spinM.value)||0));
+  seconds = Math.max(0, Math.min(59, parseInt(spinS.value)||0));
+  if (hours === 12) { minutes = 0; seconds = 0; }
+  spinH.value = hours; spinM.value = minutes; spinS.value = seconds;
+  updateDisplay(hours, minutes, seconds);
+}
+
+function updateDisplay(h, m, s) {
+  display.textContent = `${pad(h)}:${pad(m)}:${pad(s)}`;
+}
+
+function setRing(pct) {
+  const offset = CIRCUMFERENCE * (1 - pct/100);
+  progressRing.style.strokeDashoffset = offset;
+}
+
+function adjust(unit, delta) {
+  if (running) return;
+  stopAlarm();
+  if (unit==='h') spinH.value = Math.max(0,Math.min(12,(parseInt(spinH.value)||0)+delta));
+  if (unit==='m') spinM.value = Math.max(0,Math.min(59,(parseInt(spinM.value)||0)+delta));
+  if (unit==='s') spinS.value = Math.max(0,Math.min(59,(parseInt(spinS.value)||0)+delta));
+  syncFromInputs();
+  resetVisuals();
+  finished = false;
+}
+
+function setPreset(h,m,s) {
+  if (running) return;
+  stopAlarm();
+  spinH.value=h; spinM.value=m; spinS.value=s;
+  syncFromInputs();
+  resetVisuals();
+  finished = false;
+}
+
+function resetVisuals() {
+  display.className = 'time-display';
+  progressRing.className = 'ring-fill';
+  setRing(100);
+  setStatus('');
+  renderMascot('idle');
+}
+
+function setStatus(msg, alert=false) {
+  statusEl.textContent = msg;
+  statusEl.className = 'status' + (alert?' alert':'');
+}
+
+function startStop() {
+  if (finished) { reset(); return; }
+  if (running) {
+    clearInterval(interval); interval=null;
+    running=false;
+    startBtn.textContent='Resume 🌸';
+    display.className='time-display';
+    renderMascot('sleeping');
+    setStatus('paused~ 😴');
+    showBubble('paused');
+  } else {
+    if (!interval) {
+      syncFromInputs();
+      totalSeconds = hours*3600 + minutes*60 + seconds;
+      remaining = totalSeconds;
+    }
+    if (remaining<=0) return;
+    running=true;
+    startBtn.textContent='Pause 🌙';
+    setSpinnerEnabled(false);
+    display.className='time-display';
+    renderMascot('running');
+    setStatus('studying hard! 📖');
+    showBubble('running');
+    interval=setInterval(tick,1000);
+  }
+}
+
+function tick() {
+  remaining--;
+  const h=Math.floor(remaining/3600), m=Math.floor((remaining%3600)/60), s=remaining%60;
+  updateDisplay(h,m,s);
+  setRing(totalSeconds>0?(remaining/totalSeconds)*100:0);
+  if (remaining<=0) {
+    clearInterval(interval); interval=null;
+    running=false; finished=true;
+    display.className='time-display finished';
+    progressRing.className='ring-fill finished';
+    setRing(0);
+    startBtn.textContent='Reset 🎉';
+    setSpinnerEnabled(true);
+    renderMascot('finished');
+    setStatus('Time\'s up! Amazing work!! 🎉');
+    showBubble('finished');
+    triggerAlarm();
+    launchConfetti();
+  }
+}
+
+function reset() {
+  clearInterval(interval); interval=null;
+  running=false; finished=false;
+  stopAlarm();
+  remaining=0;
+  syncFromInputs();
+  resetVisuals();
+  startBtn.textContent='Start! 🌸';
+  setSpinnerEnabled(true);
+}
+
+function setSpinnerEnabled(on) {
+  spinner.style.opacity = on?'1':'0.4';
+  spinner.style.pointerEvents = on?'auto':'none';
+}
+
+// ─── SOUND ───
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  return audioCtx;
+}
+function playBeep(freq,dur,vol,delay) {
+  try {
+    const ctx=getAudioCtx(), osc=ctx.createOscillator(), gain=ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type='sine';
+    osc.frequency.setValueAtTime(freq, ctx.currentTime+delay);
+    gain.gain.setValueAtTime(vol, ctx.currentTime+delay);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+delay+dur);
+    osc.start(ctx.currentTime+delay); osc.stop(ctx.currentTime+delay+dur);
+  } catch(e){}
+}
+function playChime() {
+  playBeep(1047,0.3,0.4,0);
+  playBeep(1319,0.3,0.4,0.28);
+  playBeep(1568,0.5,0.4,0.56);
+}
+function triggerAlarm() {
+  playChime();
+  alarmInterval=setInterval(playChime,2200);
+  setTimeout(stopAlarm,15000);
+}
+function stopAlarm() {
+  if(alarmInterval){clearInterval(alarmInterval);alarmInterval=null;}
+}
+
+// ─── CONFETTI ───
+function launchConfetti() {
+  const colors=['#e8836e','#c4a0d8','#7dc4a8','#e8a870','#90b8d8','#e8c860'];
+  for(let i=0;i<40;i++){
+    setTimeout(()=>{
+      const el=document.createElement('div');
+      el.className='confetti-piece';
+      el.style.cssText=`
+        left:${20+Math.random()*60}%;
+        top:${20+Math.random()*30}%;
+        background:${colors[Math.floor(Math.random()*colors.length)]};
+        border-radius:${Math.random()>0.5?'50%':'3px'};
+        animation-duration:${0.8+Math.random()*1.2}s;
+        animation-delay:${Math.random()*0.5}s;
+        transform:rotate(${Math.random()*360}deg);
+      `;
+      document.body.appendChild(el);
+      setTimeout(()=>el.remove(),2000);
+    }, i*30);
+  }
+}
+
+// ─── INPUT EVENTS ───
+[[spinH,'h'],[spinM,'m'],[spinS,'s']].forEach(([el,unit])=>{
+  el.addEventListener('input',()=>{
+    if(running)return;
+    syncFromInputs(); resetVisuals(); finished=false; stopAlarm();
+  });
+  el.addEventListener('blur',()=>syncFromInputs());
+  el.addEventListener('wheel',(e)=>{
+    e.preventDefault();
+    if(!running)adjust(unit,e.deltaY<0?1:-1);
+  },{passive:false});
+  el.addEventListener('keydown',(e)=>{
+    if(e.key==='ArrowUp'){e.preventDefault();adjust(unit,1);}
+    if(e.key==='ArrowDown'){e.preventDefault();adjust(unit,-1);}
+  });
+});
+
+// Init
+renderMascot('idle');
+updateDisplay(0,5,0);
+setRing(100);
+setTimeout(()=>showBubble('idle'), 1000);
+</script>
+</body>
+</html>
